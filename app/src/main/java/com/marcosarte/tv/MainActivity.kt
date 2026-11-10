@@ -2,6 +2,7 @@ package com.marcosarte.tv
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -106,7 +107,7 @@ class MainActivity : Activity() {
             .sortedBy { it.name.lowercase() }
         if (arts.isEmpty()) {
             artView.bitmap = null
-            artView.message = "Abre el menú para añadir pinturas"
+            artView.message = "Pulsa OK para añadir pinturas"
             artView.invalidate()
         } else {
             index = prefs.getInt("index", 0).coerceIn(0, arts.lastIndex)
@@ -242,7 +243,9 @@ class MainActivity : Activity() {
             "Tiempo entre obras",
             if (randomOrder) "Cambiar a orden alfabético" else "Cambiar a orden aleatorio",
             "Quitar fuentes añadidas",
-            "Ayuda del mando"
+            "Ayuda del mando",
+            "Ajustar / llenar pantalla",
+            if (autoAdvance) "Dejar obra fija" else "Activar cambio automático"
         )
         AlertDialog.Builder(this).setTitle("Marcos de Arte · Colecciones")
             .setItems(entries) { _, which ->
@@ -258,6 +261,8 @@ class MainActivity : Activity() {
                     }
                     5 -> clearSources()
                     6 -> showHelp()
+                    7 -> toggleFit()
+                    8 -> toggleAuto()
                 }
             }.show()
     }
@@ -269,14 +274,26 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
-        startActivityForResult(intent, PICK_IMAGES)
+        launchPicker(intent, PICK_IMAGES)
+    }
+
+    private fun launchPicker(intent: Intent, code: Int) {
+        try {
+            startActivityForResult(intent, code)
+        } catch (_: ActivityNotFoundException) {
+            AlertDialog.Builder(this).setTitle("Selector de archivos no disponible")
+                .setMessage("Esta tele no tiene selector de archivos. Instala una app como Google Files o X-plore y vuelve a intentarlo.")
+                .setPositiveButton("Cerrar", null).show()
+        } catch (_: Throwable) {
+            toast("No se pudo abrir el selector")
+        }
     }
 
     private fun pickFolder() {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }
-        startActivityForResult(intent, PICK_FOLDER)
+        launchPicker(intent, PICK_FOLDER)
     }
 
     @Deprecated("Usa el selector de documentos Android para compatibilidad con proveedores")
@@ -341,9 +358,9 @@ class MainActivity : Activity() {
                 "← / →  Pintura anterior / siguiente\n" +
                 "↑ / ↓  Cambiar marco\n" +
                 "OK corto  Mostrar / ocultar título\n" +
-                "OK mantenido  Ajustar / llenar\n" +
+                "OK mantenido  Abrir este menú\n" +
                 "Play/Pausa o 1  Obra fija / automático\n" +
-                "MENU  Colecciones y ajustes\n" +
+                "MENU  Colecciones y ajustes (si tu mando lo tiene)\n" +
                 "Botón verde  Añadir imágenes\n" +
                 "Botón azul  Añadir carpeta\n" +
                 "Botón rojo  Ajustar / llenar"
@@ -369,7 +386,7 @@ class MainActivity : Activity() {
 
     override fun onKeyLongPress(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
-            toggleFit()
+            openMenu()
             return true
         }
         return super.onKeyLongPress(keyCode, event)
@@ -377,6 +394,7 @@ class MainActivity : Activity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) && !event.isCanceled) {
+            if (arts.isEmpty()) { openMenu(); return true }
             infoVisible = !infoVisible
             artView.infoVisible = infoVisible
             artView.invalidate()
