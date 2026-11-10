@@ -154,9 +154,11 @@ class MainActivity : Activity() {
 
     private fun openArt(art: Art): InputStream =
         if (art.assetPath != null) assets.open(art.assetPath)
-        else contentResolver.openInputStream(art.uri ?: throw FileNotFoundException())
+        else (contentResolver.openInputStream(art.uri ?: throw FileNotFoundException())
+            ?: throw FileNotFoundException())
 
-    private fun decode(art: Art): Bitmap? = try {
+    private fun decode(art: Art): Bitmap? {
+        return try {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         openArt(art).use { BitmapFactory.decodeStream(it, null, bounds) }
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
@@ -167,7 +169,8 @@ class MainActivity : Activity() {
             inPreferredConfig = Bitmap.Config.RGB_565
         }
         openArt(art).use { BitmapFactory.decodeStream(it, null, options) }
-    } catch (_: Throwable) { null }
+        } catch (_: Throwable) { null }
+    }
 
     private fun showCurrent() {
         if (arts.isEmpty()) return
