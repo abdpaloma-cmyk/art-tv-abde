@@ -1,0 +1,5 @@
+Pon aquí tus imágenes (.jpg, .jpeg, .png, .webp), idealmente de 3000 px o más.
+Se muestran en orden alfabético. Usa números para ordenarlas:
+  01_El_nacimiento_de_Venus.jpg
+  02_La_ronda_de_noche.jpg
+El nombre del archivo (sin número ni extensión) se usa como título.
